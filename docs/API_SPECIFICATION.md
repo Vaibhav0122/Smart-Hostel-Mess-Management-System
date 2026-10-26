@@ -185,36 +185,49 @@ All API responses adhere to a consistent JSON envelope:
 
 ---
 
-#### 2.2 Bulk Import Students: Stage 1 (Validate & Preview)
-* **Route**: `POST /api/v1/students/import-csv/preview`
-* **Purpose**: Parses uploaded CSV, dry-runs validation, checks duplicate emails against DB, and outputs preview without committing. (Note: shared family phone numbers are permitted).
-* **Access**: `HOSTEL_ADMIN` (`students:import`).
-* **Content-Type**: `multipart/form-data` (Field: `file`).
-* **Success (200 OK)**:
+#### 2.2 Bulk Import Students via CSV
+* **Route**: `POST /api/v1/students/import-csv`
+* **Purpose**: Uploads and processes a CSV file of student accounts. Validates required headers (`email`, `fullName`), performs row-level validation, detects duplicate emails (both intra-file and database-existing), assigns atomic sequential `studentId`s, generates single-use activation tokens, and provides an itemized row-wise error report without halting valid rows.
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`students:import`).
+* **Content-Type**: `multipart/form-data` (Field name: `file`, max size: 5 MB, allowed MIME types: `text/csv`, `text/plain`, `application/csv`, `application/vnd.ms-excel`).
+* **CSV Columns**:
+  * Required: `email`, `fullName`
+  * Optional: `registeredPhone`, `rollNumber`, `course`, `branch`, `yearOfStudy`, `emergencyContactName`, `emergencyRelationship`, `emergencyPhone`
+* **Success (201 Created / 200 OK)**:
   ```json
   {
     "success": true,
+    "message": "CSV import complete. 48 students created, 2 errors.",
     "data": {
       "totalRows": 50,
-      "validRowCount": 48,
-      "invalidRowCount": 2,
-      "validPreview": [ ...first 5 valid records... ],
+      "successCount": 48,
+      "errorCount": 2,
+      "created": [
+        { "row": 2, "email": "aarav.patel@hostel.edu", "studentId": "STU-202610001" },
+        { "row": 3, "email": "diya.sen@hostel.edu", "studentId": "STU-202610002" }
+      ],
       "errors": [
-        { "row": 14, "email": "bad-email", "reason": "Invalid email format" },
-        { "row": 29, "phone": "123", "reason": "Phone must be 10 digits" }
+        {
+          "row": 14,
+          "email": "invalid-email",
+          "errors": [{ "field": "email", "message": "Must be a valid email address." }]
+        },
+        {
+          "row": 29,
+          "email": "existing@hostel.edu",
+          "errors": [{ "field": "email", "message": "A user with this email address already exists in the system." }]
+        }
       ]
     }
   }
   ```
-
----
-
-#### 2.3 Bulk Import Students: Stage 2 (Confirm & Commit)
-* **Route**: `POST /api/v1/students/import-csv/commit`
-* **Purpose**: Commits the validated CSV records, assigns atomic student IDs, and queues activation links.
-* **Access**: `HOSTEL_ADMIN` (`students:import`).
-* **Request Body**: `{ "importBatchKey": "batch_uuid_xyz" }`
-* **Success (201 Created)**: Summary of imported records and generated student IDs.
+* **Errors**:
+  * `400 Bad Request` (`CSV_FILE_REQUIRED`): No file provided in the `file` field.
+  * `400 Bad Request` (`INVALID_FILE_TYPE`): Uploaded file is not a supported CSV MIME type.
+  * `400 Bad Request` (`CSV_MISSING_COLUMNS`): Required column headers (`email`, `fullName`) are missing.
+  * `400 Bad Request` (`CSV_EMPTY`): File contains no data rows beyond header.
+  * `401 Unauthorized` (`MISSING_AUTHENTICATION`): Authentication token missing or invalid.
+  * `403 Forbidden` (`FORBIDDEN_PERMISSION`): User role lacks `students:import` permission.
 
 ---
 
@@ -271,28 +284,43 @@ All API responses adhere to a consistent JSON envelope:
 
 ### Group 4: Hostel, Building, Room & Bed Management
 
-#### 4.1 Create Room
-* **Route**: `POST /api/v1/rooms`
-* **Access**: `HOSTEL_ADMIN` (`rooms:manage`).
-* **Request Body**:
-  ```json
-  {
-    "hostelId": "651a...",
-    "buildingId": "651b...",
-    "roomNumber": "204",
-    "floor": 2,
-    "roomType": "DOUBLE",
-    "baseMonthlyRent": 8500
-  }
-  ```
-* **Success (201 Created)**: Automatically provisions Bed A and Bed B records in `beds` collection.
+#### 4.1 Hostels API
+* **Create Hostel**: `POST /api/v1/hostels` (`rooms:manage`)
+  * Body: `{ name: string, code: string, genderType: "MALE" | "FEMALE" | "CO_ED", contactPhone?: string, contactEmail?: string, amenities?: string[], address?: object }`
+  * Returns: 201 Created with created hostel object.
+* **List Hostels**: `GET /api/v1/hostels` (`rooms:view`)
+  * Query: `genderType=...&isActive=true`
+* **Get Hostel By ID**: `GET /api/v1/hostels/:id` (`rooms:view`)
+* **Update Hostel**: `PATCH /api/v1/hostels/:id` (`rooms:manage`)
+* **Delete Hostel**: `DELETE /api/v1/hostels/:id` (`rooms:manage`) - Rejects with 409 if active buildings exist.
 
----
+#### 4.2 Buildings API
+* **Create Building**: `POST /api/v1/buildings` (`rooms:manage`)
+  * Body: `{ hostelId: string, name: string, totalFloors: number, status?: "ACTIVE" | "UNDER_RENOVATION" | "INACTIVE" }`
+  * Returns: 201 Created with building object.
+* **List Buildings**: `GET /api/v1/buildings?hostelId=...` (`rooms:view`)
+* **Get Building By ID**: `GET /api/v1/buildings/:id` (`rooms:view`)
+* **Update Building**: `PATCH /api/v1/buildings/:id` (`rooms:manage`)
+* **Delete Building**: `DELETE /api/v1/buildings/:id` (`rooms:manage`) - Rejects with 409 if rooms exist.
 
-#### 4.2 List Rooms with Real-Time Vacancy
-* **Route**: `GET /api/v1/rooms`
-* **Query Params**: `hostelId=...&floor=2&status=AVAILABLE&roomType=DOUBLE`
-* **Access**: `HOSTEL_ADMIN`.
+#### 4.3 Rooms API
+* **Create Room**: `POST /api/v1/rooms` (`rooms:manage`)
+  * Body: `{ hostelId: string, buildingId: string, roomNumber: string, floor: number, roomType: "SINGLE" | "DOUBLE" | "TRIPLE" | "FOUR_BED", baseMonthlyRent: number }`
+  * Returns: 201 Created with room and automatically provisioned beds (`Bed A`, `Bed B`, etc. matching room capacity).
+* **List Rooms**: `GET /api/v1/rooms` (`rooms:view`)
+  * Query: `hostelId=...&buildingId=...&floor=...&status=AVAILABLE&roomType=DOUBLE&availableOnly=true`
+  * Returns: Rooms with dynamically computed `vacancy: room.capacity - room.occupiedBeds`.
+* **Get Room By ID**: `GET /api/v1/rooms/:id` (`rooms:view`)
+  * Returns: Room details along with all associated bed records and vacancy count.
+* **Update Room**: `PATCH /api/v1/rooms/:id` (`rooms:manage`)
+* **Delete Room**: `DELETE /api/v1/rooms/:id` (`rooms:manage`) - Rejects with 409 if occupied.
+
+#### 4.4 Beds API
+* **List Beds**: `GET /api/v1/beds?roomId=...&hostelId=...&status=VACANT` (`rooms:view`)
+* **Get Bed By ID**: `GET /api/v1/beds/:id` (`rooms:view`)
+* **Update Bed Status**: `PATCH /api/v1/beds/:id/status` (`rooms:manage`)
+  * Body: `{ status: "VACANT" | "UNDER_MAINTENANCE" | "BLOCKED" }`
+  * Note: Manually modifying status of an OCCUPIED bed is prohibited (use checkout/transfer).
 
 ---
 
@@ -300,36 +328,64 @@ All API responses adhere to a consistent JSON envelope:
 
 #### 5.1 Allocate Bed to Student
 * **Route**: `POST /api/v1/allocations`
-* **Purpose**: Executes atomic ACID allocation transaction.
-* **Access**: `HOSTEL_ADMIN` (`allocations:create`).
+* **Purpose**: Atomically allocates a vacant bed to a student, updates bed status to `OCCUPIED`, increments room `occupiedBeds`, and updates room status to `FULL` if capacity is reached.
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`allocations:create`).
 * **Request Body**:
   ```json
   {
-    "studentId": "651c...",
-    "contractId": "651d...",
-    "roomId": "651e...",
-    "bedId": "651f...",
-    "startDate": "2026-11-01"
+    "studentId": "660000000000000000000002",
+    "bedId": "660000000000000000000040",
+    "startDate": "2026-11-01",
+    "remarks": "Allocated for academic year"
   }
   ```
-* **Success (201 Created)**: Returns updated bed status and allocation ID.
-* **Errors**: `409 Conflict` (Bed already occupied, or student already has active bed).
+* **Success (201 Created)**: Returns created allocation record, updated bed, and room.
+* **Errors**:
+  * `404 Not Found` (`STUDENT_NOT_FOUND` / `BED_NOT_FOUND` / `ROOM_NOT_FOUND`)
+  * `409 Conflict` (`STUDENT_ALREADY_ALLOCATED`): Student already holds an active allocation.
+  * `409 Conflict` (`BED_NOT_AVAILABLE`): Bed is already occupied or under maintenance.
+  * `409 Conflict` (`ROOM_CAPACITY_EXCEEDED`): Room has reached maximum capacity.
 
 ---
 
 #### 5.2 Transfer Student Room/Bed
 * **Route**: `POST /api/v1/allocations/transfer`
-* **Purpose**: Atomically vacates previous bed and occupies target bed in single transaction.
-* **Access**: `HOSTEL_ADMIN` (`allocations:transfer`).
+* **Purpose**: Atomically vacates previous bed and occupies target bed. Transitions old allocation to `TRANSFERRED`, decrements old room `occupiedBeds`, increments new room `occupiedBeds`, and creates a new active allocation.
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`allocations:transfer`).
 * **Request Body**:
   ```json
   {
-    "currentAllocationId": "652a...",
-    "targetBedId": "652b...",
-    "targetRoomId": "652c...",
-    "transferReason": "Requested quiet room for research project"
+    "currentAllocationId": "660000000000000000000088",
+    "targetBedId": "660000000000000000000050",
+    "transferReason": "Requested ground floor room for medical accommodation"
   }
   ```
+* **Success (200 OK)**: Returns `{ newAllocation, oldAllocation }`.
+* **Errors**: `400 Bad Request` (`SAME_BED_TRANSFER`), `409 Conflict` (`BED_NOT_AVAILABLE`, `ROOM_CAPACITY_EXCEEDED`).
+
+---
+
+#### 5.3 Checkout Student Bed
+* **Route**: `POST /api/v1/allocations/checkout`
+* **Purpose**: Releases bed back to `VACANT`, decrements room `occupiedBeds`, resets room status to `AVAILABLE` if it was full, and stamps allocation `status: "CHECKED_OUT"` with `endDate = now()`.
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`allocations:checkout`).
+* **Request Body**:
+  ```json
+  {
+    "allocationId": "660000000000000000000088",
+    "remarks": "Completed degree checkout"
+  }
+  ```
+* **Success (200 OK)**: Returns updated allocation.
+
+---
+
+#### 5.4 List Allocations & Student History
+* **Route**: `GET /api/v1/allocations` (`rooms:view`)
+  * Query Params: `studentId=...&roomId=...&bedId=...&status=ACTIVE`
+* **Route**: `GET /api/v1/allocations/student/:studentId/history`
+  * Access: `verifyOwnershipOrAdmin("studentId")` (Student can view own history; Admin can view any).
+  * Returns: Complete temporal history of residency allocations.
 
 ---
 

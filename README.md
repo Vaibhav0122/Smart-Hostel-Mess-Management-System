@@ -83,23 +83,269 @@ Detailed specifications, requirements, and engineering designs have been compile
 
 ---
 
-## ⚙️ Environment Configuration
+## 📁 Repository & Folder Structure
 
-Refer to [`.env.example`](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/.env.example) for the exhaustive list of configuration parameters. **Never commit actual `.env` files or secrets to source control.**
+The project employs a clean, maintainable structure separating frontend and backend applications while centralizing shared specifications in `docs/`:
 
-Key configuration groups include:
-* Application Port & Environment (`PORT`, `NODE_ENV`)
-* Database Connection String (`MONGODB_URI` — replica set required for multi-document ACID transactions; standalone permitted only for non-transactional development)
-* Authentication Secrets & Expiry (`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `ACTIVATION_TOKEN_TTL_HOURS`)
-* One-Time Admin Setup Token (`ADMIN_SETUP_SECRET`)
-* File Upload Storage Paths & Size Limits
-* Email Service Adapter (`EMAIL_PROVIDER`, `SMTP_HOST`, `DEV_EMAIL_CONSOLE_LOG`)
+```text
+smart-hostel-mess-management-system/
+├── frontend/                     # Frontend Application (React 18 + Vite + Tailwind CSS)
+│   ├── src/
+│   │   ├── components/           # Reusable UI components (Navbar, StatusCard, Badges, Footer)
+│   │   ├── services/             # Configurable API client (api.ts)
+│   │   ├── App.tsx               # Minimal application shell & live status landing page
+│   │   ├── index.css             # Tailwind base and custom typography
+│   │   └── main.tsx              # React DOM entrypoint
+│   ├── .env.example              # Frontend environment variables template
+│   ├── index.html                # Single page app entry HTML
+│   ├── package.json              # Frontend dependencies and Vite build scripts
+│   ├── tailwind.config.js        # Tailwind styling theme & tokens
+│   ├── tsconfig.json             # Frontend TypeScript configuration
+│   └── vite.config.ts            # Vite bundler configuration & local API reverse proxy
+│
+├── src/                          # Backend Application (Node.js + Express + TypeScript)
+│   ├── __tests__/                # Automated Jest test suites (100 tests passing across 7 suites)
+│   │   ├── auth.test.ts          # Authentication, token lifecycle, activation & RBAC tests
+│   │   ├── counter.service.test.ts # Unlimited student ID sequence & atomic expansion tests
+│   │   ├── env.test.ts           # Zod schema validation tests
+│   │   ├── health.routes.test.ts # Live /api/v1/health & root welcome tests
+│   │   ├── hostel.test.ts        # Hostel, Building, Room, Bed & Allocation tests
+│   │   ├── notFound.test.ts      # 404 standard envelope tests
+│   │   └── student.test.ts       # Student registration & bulk CSV import tests
+│   ├── config/                   # Configuration & Infrastructure modules
+│   │   ├── database.ts           # Mongoose connection & Replica Set ACID transaction detector
+│   │   └── env.ts                # Zod runtime environment validation & dotenv loader
+│   ├── constants/                # HTTP status codes, permissions & system constants
+│   ├── controllers/              # Request controllers (auth, health, hostel, setup, student)
+│   ├── errors/                   # Operational AppError hierarchy
+│   ├── middlewares/              # Security, auth/RBAC, CORS, 404, rate limiting & error handlers
+│   ├── models/                   # Mongoose schemas (AuditLog, Bed, BedAllocation, Building, Hostel, Room, User, etc.)
+│   ├── routes/                   # Express routes (/health, /setup, /auth, /students, /hostels, /buildings, /rooms, /beds, /allocations)
+│   ├── services/                 # Business services (auth, counter, hostel, setup, student)
+│   ├── utils/                    # Password hashing, JWT token generation & CSV parser
+│   ├── validations/              # Zod validation schemas (auth, hostel, setup, student)
+│   ├── app.ts                    # Express application instantiation & middleware stack
+│   └── server.ts                 # Server startup listener & graceful shutdown handlers
+│
+├── docs/                         # Phase 1 Architectural & Engineering Specifications
+│   ├── REQUIREMENTS.md           # 15 core functional modules & non-functional requirements
+│   ├── ARCHITECTURE.md           # Layered architecture, transaction patterns, storage adapters
+│   ├── DATABASE_SCHEMA.md        # 22 collection schemas, indexes, and retention rules
+│   ├── API_SPECIFICATION.md      # REST contracts, envelopes, and RBAC requirements
+│   ├── ROLE_PERMISSIONS.md       # Granular role-to-permission matrix
+│   ├── SECURITY_PLAN.md          # STRIDE threat model, IDOR defenses, cryptographic standards
+│   └── DEVELOPMENT_ROADMAP.md    # 11-phase implementation plan & milestone criteria
+│
+├── .env.example                  # Backend environment template (safe placeholders)
+├── .gitignore                    # Git ignore rules for node_modules, dist, secrets, and uploads
+├── jest.config.js                # Jest + ts-jest configuration
+├── package.json                  # Root package scripts coordinating backend and frontend
+└── tsconfig.json                 # Backend TypeScript compiler configuration
+```
 
 ---
 
-## 🚦 Phase 1 Status: Ready for Architecture Review
+## 🛠️ Prerequisites
 
-This repository is currently in **Phase 1 (Requirements Analysis and Technical Architecture)**. All planning, schema models, API specifications, and security plans are codified in `docs/`.
+Before getting started, ensure you have the following installed on your machine:
 
-> **Note for Evaluators & Mentors**:  
-> Application source code will be generated iteratively starting with Phase 2 once the technical architecture and open decision points are formally approved.
+* **Node.js**: `v18.x` or higher (`v20+` LTS recommended). Check with `node -v`.
+* **npm**: `v9.x` or higher. Check with `npm -v`.
+* **MongoDB Community Server**: `v6.x` or higher (or MongoDB Atlas connection string).
+  * *Important*: MongoDB **Replica Set** must be enabled for multi-document ACID transactions (see setup instructions below).
+
+---
+
+## 🚀 Installation & Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/Vaibhav0122/Smart-Hostel-Mess-Management-System.git
+cd "Smart Hostel Mess Management System"
+```
+
+### 2. Install Dependencies
+
+Install root backend dependencies:
+```bash
+npm install
+```
+
+Install frontend dependencies:
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+---
+
+## ⚙️ Environment Configuration
+
+### Backend Environment (`.env`)
+
+Copy the example template to create your local `.env`:
+```bash
+cp .env.example .env
+```
+*(On Windows PowerShell: `Copy-Item .env.example .env`)*
+
+Configure your `.env` variables:
+* `PORT`: Server port (default: `5000`).
+* `NODE_ENV`: Set to `development`.
+* `CLIENT_ORIGIN`: Frontend URL for CORS (default: `http://localhost:5173`).
+* `MONGODB_URI`: MongoDB connection string.
+  * Standalone (dev only): `mongodb://127.0.0.1:27017/smart_hostel_db`
+  * Replica Set (recommended): `mongodb://127.0.0.1:27017/smart_hostel_db?replicaSet=rs0`
+* `ADMIN_SETUP_SECRET`: A secure string (min 16 chars) for one-time initialization.
+* `JWT_ACCESS_SECRET` & `JWT_REFRESH_SECRET`: Secure secret strings for authentication.
+
+### Frontend Environment (`frontend/.env`)
+
+Copy the frontend template:
+```bash
+cp frontend/.env.example frontend/.env
+```
+*(On Windows PowerShell: `Copy-Item frontend/.env.example frontend/.env`)*
+
+Variables:
+* `VITE_API_BASE_URL`: Base URL of the backend API (default: `http://localhost:5000/api/v1`).
+
+---
+
+## 💻 Running the Application
+
+### Running Backend (Development)
+
+```bash
+# From the root directory:
+npm run dev:backend
+```
+The Express backend starts at `http://localhost:5000`. You can verify by visiting:
+* Root Welcome: `http://localhost:5000/`
+* Health Check: `http://localhost:5000/api/v1/health`
+
+### Running Frontend (Development)
+
+```bash
+# In a separate terminal from root:
+npm run dev:frontend
+
+# Or directly from the frontend directory:
+cd frontend && npm run dev
+```
+The Vite React application starts at `http://localhost:5173`. It automatically queries `/api/v1/health` and displays the real-time system status.
+
+---
+
+## 🧪 Testing & Type Checking
+
+### Running Backend Automated Tests
+
+Run the full Jest test suite (in-band):
+```bash
+npm test
+```
+This runs 30 unit and integration tests across 4 suites:
+1. `counter.service.test.ts`: STU-YYYYMM atomic generation, unlimited sequence scaling (>999), concurrency, and race-condition retries.
+2. `health.routes.test.ts`: Health check endpoint responses, DB connection state reporting, and root welcome route.
+3. `notFound.test.ts`: 404 handler structured error envelope validation.
+4. `env.test.ts`: Zod schema validation, default assignments, and rejection of invalid environment variables.
+
+### Checking TypeScript Types (Linting)
+
+```bash
+# Check backend TypeScript errors:
+npm run lint:backend
+
+# Check frontend TypeScript errors:
+npm run lint:frontend
+```
+
+### Production Builds
+
+```bash
+# Build backend (compiles TS to dist/):
+npm run build:backend
+
+# Build frontend (compiles React SPA to frontend/dist/):
+npm run build:frontend
+
+# Build both applications:
+npm run build:all
+```
+
+---
+
+## 🍃 MongoDB Replica Set Setup Notes
+
+MongoDB multi-document ACID transactions (`session.withTransaction()`) require a replica set or supported sharded cluster.
+
+### Option A: Local Single-Node Replica Set (Windows / macOS / Linux)
+
+1. Stop any standalone mongod service:
+   ```bash
+   # Windows PowerShell (as Admin):
+   net stop MongoDB
+   ```
+2. Start mongod with `--replSet rs0`:
+   ```bash
+   mongod --port 27017 --dbpath "C:\data\db" --replSet rs0
+   ```
+3. In a separate terminal, open the MongoDB shell (`mongosh`) and initiate the replica set:
+   ```javascript
+   rs.initiate({
+     _id: "rs0",
+     members: [{ _id: 0, host: "localhost:27017" }]
+   });
+   ```
+4. Verify by running `rs.status()`. Update `.env`:
+   ```env
+   MONGODB_URI=mongodb://localhost:27017/smart_hostel_db?replicaSet=rs0
+   ```
+
+### Option B: Docker (Recommended for Local Dev)
+
+Run a single-node replica set in Docker with one command:
+```bash
+docker run -d --name mongo-rs -p 27017:27017 mongo:6 --replSet rs0
+docker exec -it mongo-rs mongosh --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]})"
+```
+
+### Option C: MongoDB Atlas (Cloud)
+
+MongoDB Atlas clusters (including Free M0 tier) automatically run as 3-node replica sets with transaction support out-of-the-box. Simply set `MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/smart_hostel_db?retryWrites=true&w=majority` in `.env`.
+
+---
+
+## 🚦 Status & Implementation Roadmap
+
+* [x] **Phase 1: Requirements Analysis and Technical Architecture** (Completed)
+  * All 7 foundational specification documents in `docs/`.
+* [x] **Phase 2: Project Foundation & Environment Setup** (Completed)
+  * Express + TypeScript backend with Helmet, CORS, body-parsers, Zod env validation, and structured error handling.
+  * Health check API (`GET /api/v1/health`) with live MongoDB & replica set detection.
+  * Atomic student ID generator with auto-expansion beyond 999.
+  * React 18 + Vite + Tailwind CSS responsive frontend shell with real-time connectivity feedback.
+* [x] **Phase 3: Authentication, Activation Lifecycle & RBAC Engine** (Completed)
+  * Dual-token JWT (access + refresh) rotation, argon2/bcrypt password hashing, rate limiting, and brute-force lockout.
+  * Student activation lifecycle with cryptographically secure single-use activation tokens.
+  * Role-Based Access Control (RBAC) middleware verifying granular permissions with IDOR defense.
+* [x] **Phase 4: Student Onboarding & Bulk CSV Import** (Completed)
+  * Admin-driven single student registration with input validation (Zod) and initial inactive state (`PENDING_ACTIVATION`).
+  * Atomic auto-expanding student ID generator (`STU-YYYYMMNNN`).
+  * Bulk CSV import engine with column validation, duplicate detection (intra-file and DB-level), row-wise error isolation, and audit logging.
+  * 78/78 automated unit & integration tests passing across 6 suites.
+* [x] **Phase 5: Hostel, Building, Room & Bed Management** (Completed)
+  * Full CRUD APIs for Hostels, Buildings, Rooms, and Beds with role-based access control.
+  * Room capacity derivation (SINGLE, DOUBLE, TRIPLE, FOUR_BED) with automatic bed provisioning and real-time vacancy tracking.
+  * Allocation, transfer, and checkout workflows preventing duplicate active assignments and overcapacity.
+  * 100/100 automated unit & integration tests passing across 7 suites.
+* [ ] **Phase 6: Student Contracts & Immutable Financial Ledger** (Upcoming)
+* [ ] **Phase 7: Daily Mess Operations & Lunch Cutoff Overrides** (Upcoming)
+* [ ] **Phase 8: Complaints, Leave Applications & Visitor Management** (Upcoming)
+* [ ] **Phase 9: Notices, Broadcast Notifications & Reporting** (Upcoming)
+* [ ] **Phase 10: Role-Specific User Portals (Admin & Student Dashboards)** (Upcoming)
+* [ ] **Phase 11: End-to-End System Integration & Evaluation** (Upcoming)
+

@@ -4,7 +4,7 @@ import { z } from "zod";
 // Load environment variables from .env file
 dotenv.config();
 
-const envSchema = z.object({
+export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.string().default("5000").transform((val) => parseInt(val, 10)),
   API_PREFIX: z.string().default("/api/v1"),

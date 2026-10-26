@@ -1,0 +1,110 @@
+import { UserRole } from "./roles";
+
+/**
+ * Master Role-Permission Matrix derived strictly from docs/ROLE_PERMISSIONS.md
+ */
+export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
+  [UserRole.STUDENT]: [
+    "profile:view_self",
+    "profile:update_self",
+    "profile:upload_kyc",
+    "contracts:view_self",
+    "contracts:request_exit",
+    "finances:view_self",
+    "mess:select_meal",
+    "mess:feedback",
+    "complaints:create",
+    "complaints:view_self",
+    "complaints:feedback",
+    "leave:apply",
+    "leave:view_self",
+    "visitors:register",
+    "notices:view",
+  ],
+  [UserRole.HOSTEL_ADMIN]: [
+    "students:create",
+    "students:import",
+    "students:view_all",
+    "students:deactivate",
+    "profile:view_self",
+    "profile:view_sensitive",
+    "rooms:manage",
+    "rooms:view",
+    "allocations:create",
+    "allocations:transfer",
+    "allocations:checkout",
+    "contracts:create",
+    "contracts:approve_exit",
+    "finances:charge",
+    "finances:record_payment",
+    "finances:reverse",
+    "finances:view_all",
+    "mess:manage_menu",
+    "mess:override_selection",
+    "mess:view_roster",
+    "complaints:resolve",
+    "leave:approve",
+    "visitors:gate_log",
+    "notices:publish",
+    "reports:view",
+    "reports:export",
+    "system:audit_logs",
+  ],
+  [UserRole.SUPER_ADMIN]: [
+    "students:create",
+    "students:import",
+    "students:view_all",
+    "students:deactivate",
+    "profile:view_self",
+    "profile:view_sensitive",
+    "rooms:manage",
+    "rooms:view",
+    "allocations:create",
+    "allocations:transfer",
+    "allocations:checkout",
+    "contracts:create",
+    "contracts:approve_exit",
+    "finances:charge",
+    "finances:record_payment",
+    "finances:reverse",
+    "finances:view_all",
+    "mess:manage_menu",
+    "mess:override_selection",
+    "mess:view_roster",
+    "complaints:resolve",
+    "leave:approve",
+    "visitors:gate_log",
+    "notices:publish",
+    "reports:view",
+    "reports:export",
+    "system:audit_logs",
+  ],
+  [UserRole.ACCOUNTS_MANAGER]: [
+    "students:view_all",
+    "profile:view_self",
+    "profile:view_sensitive",
+    "finances:charge",
+    "finances:record_payment",
+    "finances:reverse",
+    "finances:view_all",
+    "reports:view",
+    "reports:export",
+  ],
+  [UserRole.MESS_STAFF]: [
+    "profile:view_self",
+    "mess:manage_menu",
+    "mess:view_roster",
+  ],
+  [UserRole.SECURITY_STAFF]: [
+    "profile:view_self",
+    "visitors:gate_log",
+  ],
+};
+
+/**
+ * Checks whether a given role holds a specific permission.
+ */
+export function hasPermission(role: UserRole, permission: string): boolean {
+  const permissions = ROLE_PERMISSIONS[role] || [];
+  return permissions.includes(permission);
+}

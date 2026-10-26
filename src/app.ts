@@ -10,8 +10,12 @@ import { errorHandler } from "./middlewares/errorHandler";
 
 const app: Application = express();
 
-// 1. Security Headers
-app.use(helmet());
+// 1. Security Headers (Clickjacking & MIME-sniffing defense)
+app.use(
+  helmet({
+    frameguard: { action: "deny" },
+  })
+);
 
 // 2. Cross-Origin Resource Sharing
 app.use(
