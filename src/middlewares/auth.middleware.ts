@@ -104,7 +104,7 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
  * Middleware: Enforces that the requesting user's role possesses the granular permission.
  * Derived from docs/ROLE_PERMISSIONS.md. Must be preceded by `requireAuth`.
  */
-export const requirePermission = (permission: string) => {
+export const requirePermission = (...permissions: string[]) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
       return next(
@@ -116,12 +116,13 @@ export const requirePermission = (permission: string) => {
       );
     }
 
-    if (!hasPermission(req.user.role, permission)) {
+    const hasAny = permissions.some((permission) => hasPermission(req.user!.role, permission));
+    if (!hasAny) {
       return next(
         new AppError(
           HttpStatus.FORBIDDEN,
           "FORBIDDEN_PERMISSION",
-          `You lack the required '${permission}' permission to perform this action.`
+          `You lack the required '${permissions.join("' or '")}' permission to perform this action.`
         )
       );
     }

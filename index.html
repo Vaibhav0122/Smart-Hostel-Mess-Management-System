@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="2; url=http://localhost:5173/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Hostel &amp; Mess Management System - Launching...</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234f46e5'><path d='M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z'/></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        background: #020617;
+        color: #f8fafc;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        background: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 20px;
+        max-width: 540px;
+        width: 100%;
+        padding: 36px 32px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        text-align: center;
+      }
+      .icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #4f46e5, #06b6d4);
+        border-radius: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+      }
+      .icon svg {
+        width: 32px;
+        height: 32px;
+        fill: #ffffff;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin-bottom: 12px;
+        background: linear-gradient(to right, #ffffff, #cbd5e1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      p {
+        color: #94a3b8;
+        font-size: 15px;
+        line-height: 1.6;
+        margin-bottom: 24px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 14px 20px;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        margin-bottom: 12px;
+      }
+      .btn-primary {
+        background: #4f46e5;
+        color: #ffffff;
+        box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.3);
+      }
+      .btn-primary:hover {
+        background: #4338ca;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+      }
+      .btn-secondary:hover {
+        background: #334155;
+      }
+      .terminal-tip {
+        margin-top: 24px;
+        padding: 14px 16px;
+        background: #020617;
+        border: 1px dashed #334155;
+        border-radius: 10px;
+        text-align: left;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 13px;
+        color: #38bdf8;
+      }
+      .terminal-label {
+        color: #64748b;
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="icon">
+        <svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/></svg>
+      </div>
+      <h1>Smart Hostel &amp; Mess System</h1>
+      <p>Redirecting you to the active Vite application at <strong>http://localhost:5173</strong>...</p>
+      
+      <a href="http://localhost:5173/" class="btn btn-primary" id="launch-btn">
+        Open Application (http://localhost:5173) &rarr;
+      </a>
+      
+      <a href="./frontend/dist/index.html" class="btn btn-secondary">
+        Open Production Build (frontend/dist/index.html)
+      </a>
+
+      <div class="terminal-tip">
+        <div class="terminal-label">To start dev servers anytime in VS Code terminal:</div>
+        <div>$ npm run dev</div>
+      </div>
+    </div>
+
+    <script>
+      // Immediate redirect if server responds
+      fetch('http://localhost:5173', { mode: 'no-cors' })
+        .then(() => {
+          window.location.href = 'http://localhost:5173/';
+        })
+        .catch(() => {
+          const btn = document.getElementById('launch-btn');
+          if (btn) btn.textContent = 'Retry Connecting to http://localhost:5173';
+        });
+    </script>
+  </body>
+</html>

@@ -104,26 +104,29 @@ smart-hostel-mess-management-system/
 │   └── vite.config.ts            # Vite bundler configuration & local API reverse proxy
 │
 ├── src/                          # Backend Application (Node.js + Express + TypeScript)
-│   ├── __tests__/                # Automated Jest test suites (100 tests passing across 7 suites)
+│   ├── __tests__/                # Automated Jest test suites (151 tests passing across 9 suites)
 │   │   ├── auth.test.ts          # Authentication, token lifecycle, activation & RBAC tests
 │   │   ├── counter.service.test.ts # Unlimited student ID sequence & atomic expansion tests
 │   │   ├── env.test.ts           # Zod schema validation tests
+│   │   ├── finance.test.ts       # Charges, payments, dues, reversals, refunds & RBAC tests
 │   │   ├── health.routes.test.ts # Live /api/v1/health & root welcome tests
 │   │   ├── hostel.test.ts        # Hostel, Building, Room, Bed & Allocation tests
+│   │   ├── mess.test.ts          # Menus, cutoff enforcement, lunch choice, kitchen roster & feedback tests
 │   │   ├── notFound.test.ts      # 404 standard envelope tests
+│   │   ├── profileAndContract.test.ts # Student profiles, KYC & residency contract tests
 │   │   └── student.test.ts       # Student registration & bulk CSV import tests
 │   ├── config/                   # Configuration & Infrastructure modules
 │   │   ├── database.ts           # Mongoose connection & Replica Set ACID transaction detector
 │   │   └── env.ts                # Zod runtime environment validation & dotenv loader
 │   ├── constants/                # HTTP status codes, permissions & system constants
-│   ├── controllers/              # Request controllers (auth, health, hostel, setup, student)
+│   ├── controllers/              # Request controllers (auth, contract, finance, health, hostel, mess, profile, setup, student)
 │   ├── errors/                   # Operational AppError hierarchy
 │   ├── middlewares/              # Security, auth/RBAC, CORS, 404, rate limiting & error handlers
-│   ├── models/                   # Mongoose schemas (AuditLog, Bed, BedAllocation, Building, Hostel, Room, User, etc.)
-│   ├── routes/                   # Express routes (/health, /setup, /auth, /students, /hostels, /buildings, /rooms, /beds, /allocations)
-│   ├── services/                 # Business services (auth, counter, hostel, setup, student)
+│   ├── models/                   # Mongoose schemas (AuditLog, Bed, BedAllocation, Building, ChargeRecord, Contract, FoodFeedback, Hostel, MealSelection, Menu, PaymentTransaction, RefundRecord, Room, StudentProfile, User, etc.)
+│   ├── routes/                   # Express routes (/health, /setup, /auth, /students, /hostels, /buildings, /rooms, /beds, /allocations, /profile, /contracts, /finances, /mess)
+│   ├── services/                 # Business services (auth, contract, counter, finance, hostel, mess, profile, setup, student)
 │   ├── utils/                    # Password hashing, JWT token generation & CSV parser
-│   ├── validations/              # Zod validation schemas (auth, hostel, setup, student)
+│   ├── validations/              # Zod validation schemas (auth, contract, finance, hostel, mess, profile, setup, student)
 │   ├── app.ts                    # Express application instantiation & middleware stack
 │   └── server.ts                 # Server startup listener & graceful shutdown handlers
 │
@@ -342,10 +345,113 @@ MongoDB Atlas clusters (including Free M0 tier) automatically run as 3-node repl
   * Room capacity derivation (SINGLE, DOUBLE, TRIPLE, FOUR_BED) with automatic bed provisioning and real-time vacancy tracking.
   * Allocation, transfer, and checkout workflows preventing duplicate active assignments and overcapacity.
   * 100/100 automated unit & integration tests passing across 7 suites.
-* [ ] **Phase 6: Student Contracts & Immutable Financial Ledger** (Upcoming)
-* [ ] **Phase 7: Daily Mess Operations & Lunch Cutoff Overrides** (Upcoming)
-* [ ] **Phase 8: Complaints, Leave Applications & Visitor Management** (Upcoming)
-* [ ] **Phase 9: Notices, Broadcast Notifications & Reporting** (Upcoming)
-* [ ] **Phase 10: Role-Specific User Portals (Admin & Student Dashboards)** (Upcoming)
-* [ ] **Phase 11: End-to-End System Integration & Evaluation** (Upcoming)
+* [x] **Phase 6: Student Profiles & Hostel Contracts** (Completed)
+  * Complete student profile lifecycle with address, emergency contact, institute academic info, and bank details with automated data masking.
+  * Self-service student profile updates guarded against unauthorized field injection, plus admin KYC verification workflow.
+  * Legally binding residency contracts with tenure dates, monthly rent, deposit, lock-in period enforcement, and early exit request/approval flows.
+  * 117/117 automated unit & integration tests passing across 8 suites.
+* [x] **Phase 7: Fees, Payments, Dues & Financial History** (Completed)
+  * Full charge/invoice generation with billing periods, due dates, and cancellation controls.
+  * Append-only payment transactions with sequential receipt generation (`REC-YYYYMM-XXXXX`) and duplicate reference / UTR detection.
+  * Atomic database transactions updating charge balances and statuses (`UNPAID`, `PARTIALLY_PAID`, `PAID`) with overpayment rejection.
+  * Auditable payment reversals generating offsetting transaction records (`REV-...`) with automatic balance rollback.
+  * Refund management for deposit returns, overpayments, and cancellations (`REF-YYYYMM-XXXX`).
+  * Live financial ledger computing total charges, total paid, total refunded, and outstanding balance with strict IDOR protection.
+  * 151/151 automated unit & integration tests passing across 9 suites.
+* [x] **Phase 8: Daily Mess Operations, Lunch Cutoffs, Roster & Feedback** (Completed)
+  * Daily rotational meal menus for breakfast, lunch, snacks, and dinner with dietary/allergen tags and upcoming 3-day projection.
+  * Student lunch selection (Dine-in vs. Tiffin) with automatic fallback to Dine-in when no selection exists.
+  * Timezone-aware daily morning cutoff enforcement (default 09:30 AM Asia/Kolkata) with strict post-cutoff locking.
+  * Authorized administrator lunch choice overrides with mandatory justification and audit logging.
+  * Daily kitchen preparation report and real-time tiffin dispatch roster calculating exact resident headcounts and reducing meal waste.
+  * Student food rating (1–5) and feedback submission with admin aggregate analytics.
+  * 171/171 automated unit & integration tests passing across 10 suites.
+* [⏸️] **Phase 9: Complaints, Leave Applications, Visitors & Notifications** (Postponed / Deferred to Post-v1)
+  * *Status*: Deferred to post-v1 release to maintain laser focus on core residency, room inventory, contracts, financial auditing, and mess operations.
+  * *Architecture Preservation*: The existing modular architecture (granular RBAC tokens in `src/constants/permissions.ts`, extensible Express router, and standard audit logging) allows these features to be plugged in later via dedicated sub-routers without altering existing modules. No placeholder models, routes, or dead dependencies are added now.
+* [x] **Phase 10: Dashboards, Reports & Frontend Integration** (Completed)
+  * Real-time Student Dashboard displaying resident profile, active room/bed allocation, contract status, live financial ledger (charges, payments, dues), today's lunch choice (Dine-in vs. Tiffin) with cutoff validation, and upcoming 3-day meal menus.
+  * Real-time Admin Dashboard calculating executive KPIs from real database collections: student counts, hostel occupancy/vacancy, active/vacated room allocations, financial totals (charges, collections, refunds, pending dues), and live today's kitchen headcounts.
+  * Interactive Admin Reports module with server-side validation and pagination:
+    * Student Directory Report with KYC filter and full-text search.
+    * Hostel Occupancy & Vacancy Breakdown Report by building and room.
+    * Financial Summary Report with detailed student ledger balances.
+    * Daily Mess Dining Roster with student lunch choices and headcounts.
+    * Streamed RFC 4180 compliant CSV export with injection defense and server-side authorization.
+  * Responsive React 18 + Vite + Tailwind CSS frontend integration with authentication modal, role-based navigation tabs (`overview`, `student`, `admin`, `reports`), live loading skeletons, empty states, error banners, and cutoff notices.
+  * 179/179 automated unit and integration tests passing across 11 test suites.
+  * Clean production builds verified for both backend (`npm run build:backend`) and frontend (`npm run build:frontend`).
+* [x] **Phase 11: Final Security Audit, Bug Fixes, and Deployment Preparation** (Completed)
+  * End-to-end security audit covering dual-token JWT authentication, RBAC permission tokens, IDOR mitigation, Zod boundary validation, KYC masking, and CSV formula-injection defense.
+  * Resolved PaymentStatus query filter mismatch (`COMPLETED` → `SUCCESS`) and corrected net payment / refund ledger arithmetic across admin metrics, student dashboard summaries, and financial reports.
+  * MongoDB multi-document ACID transactions validated with replica set detection.
+  * Verified environment variables security: `.env` excluded from version control, safe `.env.example` template provided.
+  * 179/179 automated unit and integration tests passing across all 11 test suites.
+  * Verified production builds: `npm run build:backend`, `npm run build:frontend`, and `npm run lint:frontend` passing cleanly with zero errors.
+  * Production deployment guide and security pre-flight checklist documented below.
+
+---
+
+## 🚀 Production Deployment & Operations Guide
+
+### 1. Production Architecture Overview
+
+The system is designed for containerized or PaaS deployment (Render, Railway, Fly.io, AWS ECS, or DigitalOcean App Platform):
+* **Backend**: Node.js + Express + TypeScript running in cluster or single-process mode (`dist/server.js`) behind an HTTPS reverse proxy (Nginx, Cloudflare, or AWS ALB).
+* **Frontend**: React 18 + Vite SPA built to static HTML/CSS/JS (`frontend/dist/`), served via Nginx, Cloudflare Pages, Vercel, or as static assets from Express.
+* **Database**: MongoDB 6.0+ 3-node replica set (MongoDB Atlas M10+ recommended for automatic failover, ACID transactions, and automated snapshots).
+
+### 2. Required Production Environment Variables
+
+Ensure all required production variables are set in your hosting platform's secrets manager:
+
+| Variable | Requirement | Description |
+| :--- | :--- | :--- |
+| `NODE_ENV` | `production` | Enables Express production optimizations, secure cookie headers, and disables stack trace leakage. |
+| `PORT` | `5000` (or platform default) | Port Express listens on. |
+| `CLIENT_ORIGIN` | `https://hostel.yourinstitution.edu` | Allowed CORS origin. Wildcards (`*`) are strictly blocked in production. |
+| `MONGODB_URI` | `mongodb+srv://...` | MongoDB connection URI. **Must point to a replica set** for transaction support. |
+| `JWT_ACCESS_SECRET` | 64+ char random hex | Secret for signing short-lived access tokens (15m TTL). |
+| `JWT_REFRESH_SECRET` | 64+ char random hex | Secret for signing rotating refresh tokens (7d TTL). |
+| `ADMIN_SETUP_SECRET` | 32+ char random string | One-time bootstrap secret for `POST /api/v1/setup/initial-admin`. |
+| `STORAGE_DRIVER` | `local` or `s3` | Storage backend for KYC documents and photos. |
+| `HOSTEL_TIMEZONE` | `Asia/Kolkata` | IANA timezone for meal cutoffs and daily rosters. |
+
+> Generate cryptographic secrets via:
+> ```bash
+> node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+> ```
+
+### 3. Production Build & Execution Commands
+
+```bash
+# 1. Install production dependencies
+npm ci
+
+# 2. Compile TypeScript backend to dist/
+npm run build:backend
+
+# 3. Build frontend SPA to frontend/dist/
+npm run build:frontend
+
+# 4. Verify test suite
+npm test
+
+# 5. Start production server
+npm start
+```
+
+### 4. Production Security Pre-Flight Checklist
+
+* [x] **CORS Configuration**: Restrict `CLIENT_ORIGIN` to exact production frontend domains (no `*`).
+* [x] **Rate Limiting**: Express rate limiters active on general endpoints (100 req/15m) and authentication routes (5 req/15m).
+* [x] **Helmet Security Headers**: Active on all HTTP routes with HSTS, CSP, and XSS filtering.
+* [x] **Secret Hygiene**: Real secrets never committed to Git; `.gitignore` strictly excludes `.env` and `uploads/`.
+* [x] **IDOR & Authorization**: Student profile and ledger endpoints enforce ownership match (`req.user.id === studentId`).
+* [x] **Sensitive KYC Masking**: Bank accounts and government IDs masked in all API responses.
+* [x] **CSV Injection Prevention**: Export streams sanitize formula characters (`=`, `+`, `-`, `@`).
+* [x] **Database Transactions**: Bed allocations, checkout workflows, and payments require MongoDB replica set sessions.
+
+
+
 

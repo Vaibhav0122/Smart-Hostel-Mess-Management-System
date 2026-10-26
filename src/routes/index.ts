@@ -8,6 +8,12 @@ import buildingRoutes from "./building.routes";
 import roomRoutes from "./room.routes";
 import bedRoutes from "./bed.routes";
 import allocationRoutes from "./allocation.routes";
+import profileRoutes from "./profile.routes";
+import contractRoutes from "./contract.routes";
+import financeRoutes from "./finance.routes";
+import messRoutes from "./mess.routes";
+import dashboardRoutes from "./dashboard.routes";
+import reportRoutes from "./report.routes";
 import {
   requireAuth,
   requireRole,
@@ -27,6 +33,12 @@ router.use("/buildings", buildingRoutes);
 router.use("/rooms", roomRoutes);
 router.use("/beds", bedRoutes);
 router.use("/allocations", allocationRoutes);
+router.use("/profile", profileRoutes);
+router.use("/contracts", contractRoutes);
+router.use("/finances", financeRoutes);
+router.use("/mess", messRoutes);
+router.use("/dashboard", dashboardRoutes);
+router.use("/reports", reportRoutes);
 
 // RBAC Verification Routes (Phase 3 testing without premature Phase 4+ implementation)
 router.get(

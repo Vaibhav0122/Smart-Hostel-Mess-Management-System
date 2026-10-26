@@ -16,21 +16,20 @@ Each phase builds directly upon the validated foundation of the previous phase. 
 gantt
     title Smart Hostel & Mess Management System Roadmap
     dateFormat  YYYY-MM-DD
-    section Architectural Design
-    Phase 1: Architecture & Planning (Current) :done, p1, 2026-10-24, 2d
-    section Backend Foundation
-    Phase 2: Backend Scaffolding & Setup        :active, p2, after p1, 2d
-    Phase 3: Auth, Activation & RBAC            :p3, after p2, 3d
-    Phase 4: Student Onboarding & CSV Import    :p4, after p3, 3d
-    section Core Operations
-    Phase 5: Hostel, Room & ACID Allocations   :p5, after p4, 3d
-    Phase 6: Contracts & Financial Ledger       :p6, after p5, 4d
-    Phase 7: Mess Management & Lunch Cutoffs    :p7, after p6, 3d
-    Phase 8: Complaints, Leave & Visitors       :p8, after p7, 3d
-    Phase 9: Notices, Notifications & Reports   :p9, after p8, 2d
-    section Frontend & Delivery
-    Phase 10: React + Tailwind User Portals     :p10, after p9, 6d
-    Phase 11: End-to-End Testing & Polish       :p11, after p10, 3d
+    section Completed Milestones
+    Phase 1: Architecture & Planning           :done, p1, 2026-10-24, 2d
+    Phase 2: Scaffolding & Base Setup          :done, p2, after p1, 2d
+    Phase 3: Auth, Activation & RBAC           :done, p3, after p2, 3d
+    Phase 4: Student Onboarding & CSV Import   :done, p4, after p3, 3d
+    Phase 5: Hostel, Room & Bed Inventory      :done, p5, after p4, 3d
+    Phase 6: Student Profiles & Contracts      :done, p6, after p5, 3d
+    Phase 7: Fees, Payments & Financial Ledger :done, p7, after p6, 3d
+    Phase 8: Daily Mess & Meal Selections      :done, p8, after p7, 3d
+    section Active & Upcoming Roadmap
+    Phase 10: User Portals (React + Tailwind)  :active, p10, after p8, 6d
+    Phase 11: End-to-End Testing & Polish      :p11, after p10, 3d
+    section Postponed / Deferred to Post-v1
+    Phase 9: Complaints, Leave, Visitors & Notifications :crit, p9, after p11, 5d
 ```
 
 ---
@@ -129,73 +128,79 @@ gantt
 
 ---
 
-### Phase 6: Residency Contracts & Financial Ledger
-* **Goal**: Implement contract lifecycles, dues calculations, and an immutable append-only financial ledger.
+### Phase 6: Student Profiles & Residency Contracts (COMPLETED)
+* **Goal**: Implement complete resident profiles with address, emergency contacts, academic info, masked KYC documents, and legally binding residency contracts.
 * **Core Tasks**:
-  * Implement `contracts` model (tenure, lock-in date, notice period, exit requests).
-  * Implement `chargeRecords` model (monthly rent, deposits, mess dues, late fines).
-  * Implement `paymentTransactions` model (append-only ledger, unique bank reference UTRs).
-  * Implement `refundRecords` model.
-  * Implement server-side dynamic balance calculation:  
-    $$\text{Balance} = \sum(\text{Charges}) - \sum(\text{Payments}) + \sum(\text{Refunds})$$
-  * Implement `POST /api/v1/contracts/exit-request` and `POST /api/v1/contracts/:id/approve-exit` (blocks checkout if dues > 0).
-  * Implement printable PDF / JSON receipt generation with serial receipt numbers (`REC-YYYYMM-XXXXX`).
+  * Implement `StudentProfile` model with personal, emergency, academic, and masked KYC fields.
+  * Implement `Contract` model with start/end dates, tenure, monthly rent, security deposit, lock-in period, and notice period.
+  * Implement resident self-service profile updates (`PATCH /api/v1/profile/me`) strictly guarded against unauthorized field injection.
+  * Implement admin KYC verification flow (`PATCH /api/v1/profile/:userId/documents/:docId/verify`).
+  * Implement `POST /api/v1/contracts/:id/exit-request` and admin approval `POST /api/v1/contracts/:id/approve-exit`.
 * **Acceptance Criteria**:
-  * Financial records are append-only; in-place payment edits are impossible.
-  * Recording duplicate bank reference numbers fails with `409 Conflict`.
-  * Student checkout is strictly rejected with `422 Unprocessable Entity` if outstanding dues > 0.
+  * [x] Students update only permitted personal fields; cannot alter role, room, or dues.
+  * [x] Sensitive fields (bank accounts, KYC IDs) are masked (`XXXXXX1234`).
+  * [x] Overlapping active contracts for the same resident are strictly prevented.
+  * [x] 117/117 automated tests passing across 8 suites.
 
 ---
 
-### Phase 7: Mess Management & Daily Meal Selections
-* **Goal**: Implement rotational meal menus, daily lunch choice (Tiffin vs. Dine-in), cutoff enforcement, and administrative overrides.
+### Phase 7: Fees, Payments, Dues & Financial History (COMPLETED)
+* **Goal**: Implement an immutable append-only financial ledger, billing invoices, duplicate payment prevention, payment reversals, and refunds.
 * **Core Tasks**:
-  * Implement `menus` model (day-wise, meal-type menus with items and allergen tags).
-  * Implement `mealSelections` model with `isDefault` distinction.
-  * Implement automated daily initialization: active residents default to `DINE_IN`.
-  * Implement `POST /api/v1/mess/selection` (allows student choice prior to `lunchCutoffTime`).
-  * Implement `PATCH /api/v1/mess/selection/override` (admin override post-cutoff with mandatory reason).
+  * Implement `ChargeRecord` model (`MONTHLY_RENT`, `SECURITY_DEPOSIT`, `MESS_FEE`, `LATE_FINE`, `DAMAGE_PENALTY`, etc.) with sequential invoice numbers (`CHG-YYYYMM-XXXX`).
+  * Implement `PaymentTransaction` model (append-only ledger, duplicate bank reference/UTR prevention, serial receipt generation `REC-YYYYMM-XXXXX`).
+  * Implement `RefundRecord` model (`REF-YYYYMM-XXXX`) for deposits, overpayments, and cancellations.
+  * Implement atomic database transactions updating charge balances and statuses (`UNPAID`, `PARTIALLY_PAID`, `PAID`) with overpayment rejection (`422 Unprocessable Entity`).
+  * Implement auditable payment reversals (`POST /api/v1/finances/payments/:id/reverse`) creating distinct offsetting records (`REV-...`) with automatic balance rollback.
+  * Implement server-side dynamic balance calculation:
+    $$\text{Outstanding Balance} = \sum(\text{Charges}) - \sum(\text{Payments}) - \sum(\text{Refunds})$$
+* **Acceptance Criteria**:
+  * [x] Financial records are append-only; in-place payment edits are strictly prohibited.
+  * [x] Duplicate reference numbers return `409 Conflict`.
+  * [x] IDOR defense prevents cross-student financial ledger or receipt inspection.
+  * [x] 151/151 automated tests passing across 9 suites.
+
+---
+
+### Phase 8: Daily Mess Operations, Lunch Cutoffs, Roster & Feedback (COMPLETED)
+* **Goal**: Implement rotational meal menus, daily lunch choice (Tiffin vs. Dine-in), cutoff enforcement, administrative kitchen rosters, and student food feedback.
+* **Core Tasks**:
+  * Implement `Menu` model (day-wise, meal-type menus with items and allergen tags).
+  * Implement `MealSelection` model with `isDefault` distinction.
+  * Implement daily fallback: active residents default to `DINE_IN`.
+  * Implement `POST /api/v1/mess/selection` (allows student choice prior to `lunchCutoffTime` in configured timezone).
+  * Implement `PATCH /api/v1/mess/selection/override` (admin override post-cutoff with mandatory reason and audit log).
   * Implement `auditLogs` recording actor, previous value, new value, and reason for all overrides.
   * Implement `GET /api/v1/mess/reports/daily-kitchen` (aggregated Dine-in vs. Tiffin counts + packing roster).
-  * Implement `foodFeedback` model for meal ratings and taste complaints.
+  * Implement `FoodFeedback` model for meal ratings and comments with admin aggregate analytics.
 * **Acceptance Criteria**:
-  * Student attempting to change lunch choice past cutoff receives `422 Unprocessable Entity`.
-  * Admin override updates selection and creates an unalterable audit log entry.
-  * Kitchen report displays exact headcounts and lists room numbers for students requesting tiffins.
+  * [x] Student attempting to change lunch choice past cutoff receives `422 Unprocessable Entity`.
+  * [x] Admin override updates selection and creates an unalterable audit log entry.
+  * [x] Kitchen report displays exact headcounts and lists room numbers for students requesting tiffins.
+  * [x] Student food ratings (1–5) and feedback submitted and aggregated accurately.
+  * [x] 171/171 automated unit & integration tests passing across 10 suites.
 
 ---
 
-### Phase 8: Complaints, Student Leave & Gate Visitors
-* **Goal**: Implement maintenance ticketing, leave applications, and gate visitor security.
-* **Core Tasks**:
-  * Implement `complaints` model (categories, priority, photo attachments, status history array).
-  * Implement complaint status transitions (`OPEN` -> `IN_PROGRESS` -> `RESOLVED` -> `CLOSED`).
-  * Implement student resolution rating feedback.
-  * Implement `leaveRequests` model (departure, return, emergency contact, parent consent).
-  * Implement admin leave approval/rejection.
-  * Implement `visitors` model with pre-registration and gate check-in/out timestamps.
-* **Acceptance Criteria**:
-  * Students can only view their own complaints, leave applications, and visitors.
-  * Admin status changes append to `statusHistory` with timestamps and remarks.
-  * Real-time query displays visitors currently inside hostel grounds.
-
----
-
-### Phase 9: Notices, In-App Notifications & Executive Reports
-* **Goal**: Build communication channels and administrative reporting tools.
-* **Core Tasks**:
-  * Implement `notices` model with targeting (`ALL_HOSTELS`, `HOSTEL_SPECIFIC`).
-  * Implement `notifications` model with read/unread flags and 90-day TTL cleanup.
-  * Implement `GET /api/v1/dashboard/admin-metrics` (occupancy %, pending complaints, dues, meal counts).
-  * Implement streaming CSV report generation for occupancy, fee collections, and kitchen rosters.
-* **Acceptance Criteria**:
-  * Targeted notices display only to relevant hostel residents.
-  * Exported CSV files match server ledger data and download with correct headers.
+### Phase 9: Complaints, Student Leave, Gate Visitors & Notifications (POSTPONED / DEFERRED)
+* **Status**: **DEFERRED TO POST-v1 RELEASE**
+* **Directive**: Do not implement these features now. Keep the architecture modular and extensible so they can be added later without major changes. Avoid unnecessary models, APIs, dependencies, or placeholder implementations. Preserve existing functionality and update the roadmap documentation only. Do not modify unrelated code.
+* **Rationale**: To maintain laser focus on core residency, room inventory, contracts, financial auditing, and mess operations, Phase 9 features are postponed to post-v1.
+* **Architectural Extensibility & Preservation Guidelines**:
+  * *Zero Code Pollution*: No dummy models, unused API routes, or placeholder stub controllers are introduced into the codebase, preserving clean and minimal code.
+  * *RBAC Readiness*: Granular permission tokens (`complaints:create`, `complaints:view_self`, `complaints:resolve`, `leave:apply`, `leave:approve`, `visitors:register`, `visitors:gate_log`, `notices:publish`, `notices:view`) are already defined in `src/constants/permissions.ts` and supported by `requirePermission`.
+  * *Pluggable Modular Design*: When implemented, new domain sub-routers (`/complaints`, `/leave`, `/visitors`, `/notices`) can be mounted cleanly into `src/routes/index.ts` without touching existing inventory, contract, financial, or mess modules.
+  * *Standard Envelopes & Audit Logging*: All future operations will reuse the existing `AppError` hierarchy, `validateRequest` Zod wrappers, and `AuditLog.create` hooks without structural refactoring.
+* **Scope for Future Implementation (Post-v1)**:
+  * Maintenance ticketing lifecycle (`OPEN` -> `IN_PROGRESS` -> `RESOLVED` -> `CLOSED`) with priority and feedback ratings.
+  * Student leave applications with departure/return dates, emergency contact, and warden approvals.
+  * Gate visitor pre-registration and physical security check-in/out logging.
+  * Broadcast notices targeted by hostel and in-app notifications with read/unread tracking.
 
 ---
 
 ### Phase 10: Frontend Architecture & User Interfaces (React + Tailwind)
-* **Goal**: Develop polished, responsive, and accessible SPAs for both Admin and Student dashboards.
+* **Goal**: Develop polished, responsive, and accessible SPAs for both Admin and Student dashboards covering all completed core modules (Phases 1–8).
 * **Core Tasks**:
   * Scaffold Vite + React + TypeScript project with Tailwind CSS.
   * Implement design system tokens (colors, cards, typography, badges, dark/light theme).
@@ -207,13 +212,10 @@ gantt
     * Room & bed occupancy visual grid with allocation/transfer modal.
     * Financial ledger with manual payment entry and receipt preview.
     * Mess planner with weekly menu editor and live kitchen preparation rosters.
-    * Complaint Kanban board / list with staff assignment and status updates.
-    * Leave request management and gate visitor logs.
   * Build **Student Portal**:
-    * Personal resident dashboard (room summary, active notices, dues alert).
+    * Personal resident dashboard (room summary, dues alert).
     * "Stay" tab (contract terms, payment history, download receipts, request exit).
-    * "Food" tab (3-day menus, lunch Dine-in vs. Tiffin selector with countdown timer).
-    * "Support" tab (raise complaint with image preview, submit leave, register visitor).
+    * "Food" tab (3-day menus, lunch Dine-in vs. Tiffin selector with countdown timer, feedback submission).
     * "Profile" tab (view and edit personal details, view masked KYC).
 * **Acceptance Criteria**:
   * UI is fully responsive across mobile (360px) and desktop (1920px).

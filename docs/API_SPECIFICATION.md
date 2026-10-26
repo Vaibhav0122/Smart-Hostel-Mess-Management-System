@@ -242,43 +242,37 @@ All API responses adhere to a consistent JSON envelope:
 ### Group 3: Student Profile & KYC Management
 
 #### 3.1 Get Profile (Self or Admin)
-* **Route**: `GET /api/v1/profile/me` (or `GET /api/v1/profile/:studentId` for Admin)
-* **Access**: Student (Own profile) or `HOSTEL_ADMIN`.
+* **Route**: `GET /api/v1/profile/me` (or `GET /api/v1/profile/:userId` for Admin/Self)
+* **Access**: Resident (`profile:view_self`) or Administrator (`profile:view_sensitive`, `HOSTEL_ADMIN`, `SUPER_ADMIN`).
 * **Success (200 OK)**: Returns full student profile with masked KYC numbers and bank details.
+* **Sensitive Data Protection**: Bank account numbers and KYC document IDs are masked (`XXXXXX1234`, `XXXX-XXXX-9876`). IDOR defense prevents cross-student profile inspection.
 
 ---
 
-#### 3.2 Update Own Profile
+#### 3.2 Update Own Profile (Resident Self-Service)
 * **Route**: `PATCH /api/v1/profile/me`
-* **Access**: Student (`profile:update_self`).
-* **Request Body**:
-  ```json
-  {
-    "alternatePhone": "9876501234",
-    "bloodGroup": "B+",
-    "dietaryPreference": "VEGETARIAN",
-    "addresses": {
-      "current": { "street": "Flat 4B", "city": "Noida", "state": "UP", "postalCode": "201301" }
-    }
-  }
-  ```
-* **Validation**: Rejects any attempt to inject `role`, `studentId`, `roomId`, or `dues`.
+* **Access**: Resident (`profile:update_self`).
+* **Permitted Fields**: `alternatePhone`, `bloodGroup`, `dietaryPreference`, `addresses` (current and permanent), `emergencyContact`, `bankDetails`.
+* **Validation & Security**: Strictly rejects attempts to inject `userId`, `role`, `studentId`, `academicInfo`, or KYC verification statuses.
 
 ---
 
-#### 3.3 Upload KYC Document
-* **Route**: `POST /api/v1/profile/documents`
-* **Access**: Student (`profile:upload_kyc`).
-* **Content-Type**: `multipart/form-data`
-* **Body**: `documentType` (`AADHAAR` | `PAN` | `COLLEGE_ID`), `maskedIdNumber`, `file` (PDF/JPEG/PNG, max 5 MB).
-* **Success (201 Created)**: Metadata of uploaded document (file key hidden, secure ID returned).
+#### 3.3 Admin Profile Management
+* **Create Profile**: `POST /api/v1/profile` (`HOSTEL_ADMIN`, `SUPER_ADMIN`)
+  * Request Body: `{ userId, fullName, registeredPhone, alternatePhone?, dateOfBirth?, gender?, bloodGroup?, dietaryPreference?, academicInfo?, addresses?, emergencyContact, bankDetails? }`
+* **Update Profile (Admin)**: `PATCH /api/v1/profile/:userId` (`HOSTEL_ADMIN`, `SUPER_ADMIN`)
+* **List Profiles (Admin)**: `GET /api/v1/profile?course=...&branch=...&yearOfStudy=...`
 
 ---
 
-#### 3.4 Secure Stream KYC Document
-* **Route**: `GET /api/v1/profile/documents/:docId`
-* **Purpose**: Securely streams private document binary after ownership/admin check.
-* **Access**: Document Owner or `HOSTEL_ADMIN`.
+#### 3.4 Upload & Verify KYC Document
+* **Upload KYC**: `POST /api/v1/profile/documents`
+  * Access: Resident (`profile:upload_kyc`).
+  * Content-Type: `multipart/form-data` or JSON with fields: `documentType` (`AADHAAR` | `PAN` | `COLLEGE_ID` | `PASSPORT`), `idNumber`, optional `file`.
+  * Success (201 Created): Attaches masked document metadata (`XXXX-XXXX-1234`) and sets `verified: false`.
+* **Verify KYC (Admin)**: `PATCH /api/v1/profile/:userId/documents/:docId/verify`
+  * Access: Administrator (`profile:view_sensitive`).
+  * Success (200 OK): Sets `verified: true`, `verifiedByAdminId`, and `verifiedAt`.
 
 ---
 
@@ -393,27 +387,47 @@ All API responses adhere to a consistent JSON envelope:
 
 #### 6.1 Create Contract
 * **Route**: `POST /api/v1/contracts`
-* **Access**: `HOSTEL_ADMIN`.
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`contracts:create`).
 * **Request Body**:
   ```json
   {
-    "studentId": "651c...",
-    "hostelId": "651a...",
+    "studentId": "660000000000000000000002",
+    "hostelId": "660000000000000000000010",
+    "roomId": "660000000000000000000030",
+    "bedId": "660000000000000000000040",
     "startDate": "2026-11-01",
     "endDate": "2027-10-31",
     "tenureMonths": 12,
     "lockInUntilDate": "2027-04-30",
     "noticePeriodDays": 30,
     "monthlyRentAmount": 8500,
-    "securityDepositAmount": 15000
+    "securityDepositAmount": 15000,
+    "status": "ACTIVE"
   }
   ```
+* **Validation**: Enforces `endDate > startDate`, `lockInUntilDate >= startDate && lockInUntilDate <= endDate`, and prevents multiple concurrent `ACTIVE` contracts per student.
 
 ---
 
-#### 6.2 Initiate Exit Request (Student)
-* **Route**: `POST /api/v1/contracts/exit-request`
-* **Access**: Student (`contracts:request_exit`).
+#### 6.2 List Contracts & Student History
+* **List Contracts (Admin)**: `GET /api/v1/contracts?studentId=...&hostelId=...&status=ACTIVE` (`contracts:view_all`).
+* **Get Contract by ID**: `GET /api/v1/contracts/:id` (Resident owner or Admin).
+* **Get Student Contract History**: `GET /api/v1/contracts/student/:studentId/history`
+  * Access: Resident owner or Administrator (`verifyOwnershipOrAdmin`).
+  * Returns: Full temporal residency contract ledger.
+
+---
+
+#### 6.3 Update Contract Details
+* **Route**: `PATCH /api/v1/contracts/:id`
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`contracts:create`).
+* **Permitted Fields**: `roomId`, `bedId`, `noticePeriodDays`, `monthlyRentAmount`, `securityDepositAmount`, `includedServices`, `status`.
+
+---
+
+#### 6.4 Initiate Exit Request (Resident)
+* **Route**: `POST /api/v1/contracts/:id/exit-request`
+* **Access**: Resident owner (`contracts:request_exit`).
 * **Request Body**:
   ```json
   {
@@ -421,14 +435,21 @@ All API responses adhere to a consistent JSON envelope:
     "reason": "Graduating and semester internship in Bengaluru"
   }
   ```
+* **Calculations**: Automatically checks lock-in date: if leaving prematurely before `lockInUntilDate`, notes early exit penalty deduction. Sets `status: "EXIT_REQUESTED"`.
 
 ---
 
-#### 6.3 Approve Exit & Final Checkout (Admin)
-* **Route**: `POST /api/v1/contracts/:contractId/approve-exit`
-* **Purpose**: Verifies dues == 0; atomically marks bed vacant and finishes contract.
-* **Access**: `HOSTEL_ADMIN` (`contracts:approve_exit`).
-* **Errors**: `422 Unprocessable Entity` ("Cannot checkout student: Outstanding dues of ₹4,200 pending").
+#### 6.5 Approve Exit & Final Clearance (Admin)
+* **Route**: `POST /api/v1/contracts/:id/approve-exit`
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`contracts:approve_exit`).
+* **Request Body**:
+  ```json
+  {
+    "adminRemarks": "Dues cleared, room inspected in good condition",
+    "earlyExitPenaltyAmount": 0
+  }
+  ```
+* **Success (200 OK)**: Marks `status: "EXIT_APPROVED"`, `duesCleared: true`, and records timestamps.
 
 ---
 
@@ -436,45 +457,80 @@ All API responses adhere to a consistent JSON envelope:
 
 #### 7.1 Generate Charge / Invoice
 * **Route**: `POST /api/v1/finances/charges`
-* **Access**: `HOSTEL_ADMIN` (`finances:charge`).
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` / `ACCOUNTS_MANAGER` (`finances:charge`).
 * **Request Body**:
   ```json
   {
-    "studentId": "651c...",
-    "contractId": "651d...",
+    "studentId": "660000000000000000000002",
+    "contractId": "660000000000000000000010",
     "chargeType": "MONTHLY_RENT",
     "billingPeriod": "2026-11",
     "amount": 8500,
-    "dueDate": "2026-11-05"
+    "dueDate": "2026-11-05T00:00:00.000Z",
+    "notes": "November monthly room rent"
   }
   ```
+* **Success (201 Created)**: Returns created charge record with serial `CHG-YYYYMM-XXXX`.
+* **Validation**: Rejects invalid `chargeType`, negative amounts, or malformed `billingPeriod` (`YYYY-MM`).
 
 ---
 
-#### 7.2 Record Manual Payment
+#### 7.2 List Charges
+* **Route**: `GET /api/v1/finances/charges`
+* **Query Params**: `studentId=...&status=...&billingPeriod=...`
+* **Access**: Resident (`finances:view_self` – sees own charges only) or Administrator (`finances:view_all`).
+
+---
+
+#### 7.3 Cancel Charge
+* **Route**: `PATCH /api/v1/finances/charges/:id/cancel`
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` / `ACCOUNTS_MANAGER` (`finances:charge`).
+* **Request Body**: `{ "cancellationReason": "Contract cancelled before billing period" }`
+* **Validation**: Rejects cancelling already `PAID` charges (`409 Conflict`) or already `CANCELLED` charges.
+
+---
+
+#### 7.4 Record Manual Payment
 * **Route**: `POST /api/v1/finances/payments`
 * **Purpose**: Records an append-only payment transaction.
-* **Access**: `HOSTEL_ADMIN` (`finances:record_payment`).
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` / `ACCOUNTS_MANAGER` (`finances:record_payment`).
 * **Request Body**:
   ```json
   {
-    "studentId": "651c...",
-    "chargeRecordId": "653a...",
+    "studentId": "660000000000000000000002",
+    "chargeRecordId": "660000000000000000000020",
     "amountPaid": 8500,
     "paymentMethod": "UPI",
     "referenceNumber": "UPI-42981029384",
-    "paymentDate": "2026-11-03",
+    "paymentDate": "2026-11-03T10:00:00.000Z",
     "notes": "Paid via Google Pay"
   }
   ```
-* **Success (201 Created)**: Generates serial receipt `REC-202611-00042`.
-* **Errors**: `409 Conflict` (Duplicate bank reference UTR number).
+* **Success (201 Created)**: Generates serial receipt `REC-YYYYMM-XXXXX`. Atomically updates linked charge status to `PARTIALLY_PAID` or `PAID`.
+* **Errors**: `409 Conflict` (Duplicate bank reference UTR number, or payment against cancelled/paid charge), `422 Unprocessable Entity` (Overpayment exceeding outstanding balance).
 
 ---
 
-#### 7.3 Get Financial Dues & Ledger
-* **Route**: `GET /api/v1/finances/ledger/me` (or `GET /api/v1/finances/ledger/:studentId` for Admin)
-* **Access**: Student (Own ledger) or `HOSTEL_ADMIN`.
+#### 7.5 List Payment Transactions
+* **Route**: `GET /api/v1/finances/payments`
+* **Query Params**: `studentId=...`
+* **Access**: Resident (`finances:view_self` – sees own payments only) or Administrator (`finances:view_all`).
+
+---
+
+#### 7.6 Payment Reversal (Auditable Offsetting Record)
+* **Route**: `POST /api/v1/finances/payments/:id/reverse`
+* **Purpose**: Reverses a payment by generating a distinct offsetting reversal transaction record and rolling back linked charge balance. Never silently alters history.
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` / `ACCOUNTS_MANAGER` (`finances:reverse`).
+* **Request Body**: `{ "reversalReason": "Cheque bounced / payment dispute" }`
+* **Success (201 Created)**: Returns reversal transaction record with reference `REV-...`.
+* **Errors**: `409 Conflict` (Transaction already reversed, or attempting to reverse a reversal).
+
+---
+
+#### 7.7 Get Financial Dues & Ledger
+* **Route**: `GET /api/v1/finances/ledger/me` (Resident) or `GET /api/v1/finances/ledger/:studentId` (Admin)
+* **Access**: Resident (`finances:view_self` – strictly own ledger) or Administrator (`finances:view_all`).
 * **Success (200 OK)**:
   ```json
   {
@@ -485,102 +541,188 @@ All API responses adhere to a consistent JSON envelope:
       "totalRefunded": 0,
       "outstandingBalance": 8500,
       "chargeHistory": [ ... ],
-      "paymentHistory": [ ... ]
+      "paymentHistory": [ ... ],
+      "refundHistory": [ ... ]
     }
   }
   ```
 
 ---
 
-#### 7.4 Download Payment Receipt
+#### 7.8 Get Payment Receipt
 * **Route**: `GET /api/v1/finances/receipts/:receiptNumber`
-* **Purpose**: Generates printable PDF / verified receipt data.
-* **Access**: Student (Own receipt) or `HOSTEL_ADMIN`.
+* **Access**: Resident owner (`finances:view_self`) or Administrator (`finances:view_all`).
+* **Errors**: `404 Not Found` (Receipt does not exist), `403 Forbidden` (Cross-student receipt inspection denied).
+
+---
+
+#### 7.9 Issue Refund
+* **Route**: `POST /api/v1/finances/refunds`
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` / `ACCOUNTS_MANAGER` (`finances:reverse`).
+* **Request Body**:
+  ```json
+  {
+    "studentId": "660000000000000000000002",
+    "contractId": "660000000000000000000010",
+    "originalPaymentId": "660000000000000000000030",
+    "amount": 15000,
+    "reason": "SECURITY_DEPOSIT_RETURN",
+    "paymentMethod": "BANK_TRANSFER",
+    "bankReferenceNumber": "NEFT-20261101-999XYZ",
+    "refundDate": "2026-11-30T00:00:00.000Z",
+    "notes": "Full security deposit refund upon departure"
+  }
+  ```
+* **Success (201 Created)**: Creates refund record with serial `REF-YYYYMM-XXXX`.
+* **Validation**: Validates permitted reason (`SECURITY_DEPOSIT_RETURN`, `OVERPAYMENT_REFUND`, `CONTRACT_CANCELLATION`), positive amount, and valid payment reference.
+
+---
+
+#### 7.10 List Refunds
+* **Route**: `GET /api/v1/finances/refunds`
+* **Query Params**: `studentId=...`
+* **Access**: Resident (`finances:view_self` – sees own refunds only) or Administrator (`finances:view_all`).
 
 ---
 
 ### Group 8: Food & Mess Management
 
-#### 8.1 Create/Update Day Menu
+#### 8.1 Create Daily Menu
 * **Route**: `POST /api/v1/mess/menu`
-* **Access**: `HOSTEL_ADMIN` (`mess:manage_menu`).
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` / `MESS_STAFF` (`mess:manage_menu`).
 * **Request Body**:
   ```json
   {
-    "hostelId": "651a...",
-    "mealDate": "2026-10-25",
+    "hostelId": "651a00000000000000000001",
+    "mealDate": "2026-11-01",
     "mealType": "LUNCH",
-    "title": "Rajma Chawal Feast",
-    "items": ["Rajma", "Steamed Basmati Rice", "Raita", "Salad", "Papad"]
+    "title": "Royal North Indian Thali",
+    "items": ["Paneer Butter Masala", "Jeera Rice", "Tandoori Roti", "Gulab Jamun"],
+    "isSpecialMeal": false,
+    "dietaryTags": ["VEGETARIAN", "NORTH_INDIAN"]
   }
   ```
+* **Success (201 Created)**: Returns created menu object in `data.menu`.
+* **Errors**: `409 Conflict` (`MENU_ALREADY_EXISTS`), `404 Not Found` (`HOSTEL_NOT_FOUND`).
 
 ---
 
-#### 8.2 Get Menus (Upcoming 3 Days)
+#### 8.2 Update & Delete Daily Menu
+* **Update Route**: `PUT /api/v1/mess/menu/:id`
+  * Access: `HOSTEL_ADMIN` / `SUPER_ADMIN` / `MESS_STAFF` (`mess:manage_menu`).
+  * Request Body: `{ "title": "...", "items": [...], "isSpecialMeal": true }`
+* **Delete Route**: `DELETE /api/v1/mess/menu/:id`
+  * Access: `HOSTEL_ADMIN` / `SUPER_ADMIN` / `MESS_STAFF` (`mess:manage_menu`).
+
+---
+
+#### 8.3 Get Upcoming Menus (Next 3 Days)
 * **Route**: `GET /api/v1/mess/menu`
-* **Query Params**: `hostelId=...&days=3`
-* **Access**: Authenticated (`STUDENT`, `HOSTEL_ADMIN`).
+* **Query Params**: `hostelId=...&startDate=YYYY-MM-DD&days=3`
+* **Access**: Authenticated (`STUDENT`, `HOSTEL_ADMIN`, `SUPER_ADMIN`, `MESS_STAFF`).
+* **Behavior**: For students, automatically resolves their assigned hostel if not explicitly provided.
 
 ---
 
-#### 8.3 Submit Daily Lunch Choice (Tiffin vs. Dine-in)
+#### 8.4 Submit Daily Lunch Choice (Tiffin vs. Dine-in)
 * **Route**: `POST /api/v1/mess/selection`
 * **Purpose**: Student sets lunch preference before cutoff for a specific local calendar date.
 * **Access**: Student (`mess:select_meal`).
 * **Request Body**:
   ```json
   {
-    "mealDate": "2026-10-25",
+    "mealDate": "2026-11-01",
     "selection": "TIFFIN" // Or "DINE_IN"
   }
   ```
-* **Business Rule**: Must be submitted before `lunchCutoffTime` (e.g., 09:30 AM local hostel time).
-* **Success (200 OK)**: Sets `selection: "TIFFIN"`, `isDefault: false`.
-* **Errors**: `422 Unprocessable Entity` ("Cutoff time of 09:30 AM has passed for this date").
+* **Business Rule**: Enforces daily cutoff (default `09:30 AM Asia/Kolkata`). Future dates are open; past or post-cutoff dates are rejected.
+* **Success (200 OK)**: Atomically upserts selection, sets `isDefault: false`.
+* **Errors**: `422 Unprocessable Entity` (`CUTOFF_TIME_PASSED`).
 
 ---
 
-#### 8.4 Authorized Administrator Selection Override
+#### 8.5 View Own Meal Selection
+* **Route**: `GET /api/v1/mess/selection/me`
+* **Query Params**: `mealDate=YYYY-MM-DD` (defaults to today in hostel timezone)
+* **Access**: Student (`mess:select_meal`).
+* **Behavior**: Returns student's recorded selection, or returns default `DINE_IN` with `isDefault: true` when no selection exists.
+
+---
+
+#### 8.6 Authorized Administrator Selection Override
 * **Route**: `PATCH /api/v1/mess/selection/override`
-* **Purpose**: Allows warden to alter a student's selection after cutoff, with mandatory audit logging.
-* **Access**: `HOSTEL_ADMIN` (`mess:override_selection`).
+* **Purpose**: Allows authorized admins to alter a student's selection after cutoff with mandatory audit logging.
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`mess:override_selection`).
 * **Request Body**:
   ```json
   {
-    "studentId": "651c...",
-    "mealDate": "2026-10-25",
+    "studentId": "651c00000000000000000004",
+    "mealDate": "2026-11-01",
     "newSelection": "TIFFIN",
-    "overrideReason": "Student has unexpected lab exam at 1:00 PM; authorized by Warden"
+    "overrideReason": "Student has unexpected lab exam off-campus; approved by Warden"
   }
   ```
-* **Success (200 OK)**: Updates selection and writes immutable entry to `auditLogs`.
+* **Success (200 OK)**: Updates selection, sets `isOverridden: true`, records `overriddenByAdminId`, and appends immutable `auditLogs` entry.
 
 ---
 
-#### 8.5 Daily Kitchen Preparation & Tiffin Dispatch Roster
+#### 8.7 Daily Kitchen Preparation & Tiffin Dispatch Roster
 * **Route**: `GET /api/v1/mess/reports/daily-kitchen`
-* **Query Params**: `hostelId=...&mealDate=2026-10-25`
-* **Access**: `HOSTEL_ADMIN`, `MESS_STAFF`.
+* **Query Params**: `hostelId=...&mealDate=2026-11-01`
+* **Access**: `HOSTEL_ADMIN`, `SUPER_ADMIN`, `MESS_STAFF` (`mess:view_roster`).
 * **Success (200 OK)**:
   ```json
   {
     "success": true,
     "data": {
-      "mealDate": "2026-10-25",
+      "mealDate": "2026-11-01",
+      "hostelId": "651a00000000000000000001",
       "totalResidents": 210,
       "confirmedDineInCount": 162,
       "confirmedTiffinCount": 48,
       "explicitSelections": 85,
       "defaultSelections": 125,
       "tiffinRoster": [
-        { "studentId": "STU-202610001", "name": "Vaibhav Kumar", "room": "204-A", "phone": "9876543210" }
+        {
+          "studentId": "STU-202610001",
+          "name": "Vaibhav Kumar",
+          "room": "204-A",
+          "phone": "+919876543210",
+          "isOverridden": false,
+          "overrideReason": null
+        }
       ]
     }
   }
   ```
 
 ---
+
+#### 8.8 Submit Food Ratings & Feedback
+* **Route**: `POST /api/v1/mess/feedback`
+* **Access**: Student (`mess:feedback`).
+* **Request Body**:
+  ```json
+  {
+    "mealDate": "2026-11-01",
+    "mealType": "LUNCH",
+    "rating": 5,
+    "tasteRating": 5,
+    "hygieneRating": 4,
+    "comments": "Hot and fresh roti, excellent paneer curry."
+  }
+  ```
+* **Validation**: `rating` integer 1–5 (required), `tasteRating` & `hygieneRating` 1–5 (optional).
+
+---
+
+#### 8.9 List Food Feedback & Aggregate Analytics
+* **Route**: `GET /api/v1/mess/feedback`
+* **Query Params**: `hostelId=...&mealDate=...&mealType=...&startDate=...&endDate=...`
+* **Access**: Students view their own submissions; Admins and Mess Staff view all with computed summary analytics (`totalReviews`, `averageRating`, `averageTaste`, `averageHygiene`).
+
+---
+
 
 ### Group 9: Complaints & Grievance Dispatch
 
@@ -665,35 +807,143 @@ All API responses adhere to a consistent JSON envelope:
 
 ---
 
-### Group 12: Admin Dashboard & Reports
+### Group 12: Dashboards & Reports
 
-#### 12.1 Real-Time Executive KPI Dashboard
+#### 12.1 Real-Time Admin Executive KPI Metrics
 * **Route**: `GET /api/v1/dashboard/admin-metrics`
-* **Access**: `HOSTEL_ADMIN` (`reports:view`).
+* **Query Params**: `hostelId` (optional ObjectId)
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`reports:view`).
 * **Success (200 OK)**:
   ```json
   {
     "success": true,
+    "statusCode": 200,
+    "message": "Admin dashboard metrics retrieved successfully",
     "data": {
-      "totalStudents": 210,
+      "studentCount": 210,
       "totalBeds": 240,
       "occupiedBeds": 210,
       "vacantBeds": 30,
       "occupancyRate": 87.5,
-      "pendingComplaints": 4,
-      "activeLeavesToday": 12,
-      "visitorsInside": 3,
-      "totalOutstandingDues": 42500,
-      "todayLunchDineIn": 162,
-      "todayLunchTiffin": 48
+      "roomAllocations": {
+        "active": 210,
+        "vacated": 45
+      },
+      "finances": {
+        "totalCharges": 1500000,
+        "totalPaid": 1420000,
+        "totalRefunded": 10000,
+        "netPaid": 1410000,
+        "totalPendingDues": 90000
+      },
+      "messCounts": {
+        "dineIn": 162,
+        "tiffin": 48,
+        "total": 210
+      }
     }
   }
   ```
 
 ---
 
-#### 12.2 Export Server-Side CSV Reports
+#### 12.2 Student Personal Summary Dashboard
+* **Route**: `GET /api/v1/dashboard/student-summary`
+* **Access**: Authenticated `STUDENT` (`student:view_own`).
+* **Success (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Student dashboard summary retrieved successfully",
+    "data": {
+      "profile": {
+        "fullName": "Aarav Sharma",
+        "email": "aarav.sharma@example.com",
+        "phone": "+919876543210",
+        "kycStatus": "VERIFIED"
+      },
+      "allocation": {
+        "hostelId": "651a...",
+        "hostelName": "Block A Boys Hostel",
+        "roomId": "651b...",
+        "roomNumber": "A-101",
+        "bedId": "651c...",
+        "bedNumber": "B1",
+        "startDate": "2026-08-01T00:00:00.000Z"
+      },
+      "contract": {
+        "status": "ACTIVE",
+        "monthlyRent": 8500,
+        "securityDeposit": 17000,
+        "startDate": "2026-08-01T00:00:00.000Z",
+        "endDate": "2027-05-31T00:00:00.000Z"
+      },
+      "dues": {
+        "totalCharges": 25500,
+        "totalPaid": 25500,
+        "totalRefunded": 0,
+        "netPaid": 25500,
+        "outstandingDues": 0
+      },
+      "todayMeal": {
+        "date": "2026-10-26",
+        "choice": "TIFFIN",
+        "cutoffPassed": false,
+        "cutoffTime": "09:30"
+      },
+      "upcomingMenus": [
+        {
+          "date": "2026-10-26",
+          "meals": {
+            "breakfast": { "items": ["Poha", "Boiled Eggs", "Tea"], "isSpecial": false },
+            "lunch": { "items": ["Paneer Butter Masala", "Dal Tadka", "Roti", "Rice"], "isSpecial": false },
+            "snacks": { "items": ["Samosa", "Coffee"], "isSpecial": false },
+            "dinner": { "items": ["Mix Veg", "Roti", "Rice"], "isSpecial": false }
+          }
+        }
+      ]
+    }
+  }
+  ```
+
+---
+
+#### 12.3 Admin Student Directory Report
+* **Route**: `GET /api/v1/reports/students`
+* **Query Params**: `page` (number), `limit` (number), `status` (`ALL|VERIFIED|PENDING|REJECTED`), `search` (string)
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`reports:view`).
+* **Response Envelope**: Standard envelope with `pagination` (`page`, `limit`, `totalRecords`, `totalPages`).
+
+---
+
+#### 12.4 Admin Occupancy & Vacancy Report
+* **Route**: `GET /api/v1/reports/occupancy`
+* **Query Params**: `hostelId` (optional ObjectId)
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`reports:view`).
+* **Returns**: Array of hostels with total rooms, bed capacity, occupied beds, vacant beds, and occupancy percentage.
+
+---
+
+#### 12.5 Admin Financial Summary Report
+* **Route**: `GET /api/v1/reports/finances`
+* **Query Params**: `hostelId` (optional ObjectId)
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`reports:view`).
+* **Returns**: High-level financial breakdown (total charges, collected, refunded, pending dues) along with per-student financial ledger summaries.
+
+---
+
+#### 12.6 Admin Daily Mess & Attendance Counts Report
+* **Route**: `GET /api/v1/reports/mess`
+* **Query Params**: `date` (`YYYY-MM-DD`, defaults to today), `hostelId` (optional ObjectId)
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`reports:view`).
+* **Returns**: Lunch headcounts for Dine-in and Tiffin, menu for the day, and detailed student-by-student selection list.
+
+---
+
+#### 12.7 Export Server-Side CSV Reports
 * **Route**: `GET /api/v1/reports/export-csv`
-* **Query Params**: `type=occupancy | finances | complaints | mess&startDate=...&endDate=...`
-* **Access**: `HOSTEL_ADMIN` (`reports:export`).
-* **Response**: Streamed CSV file attachment with header `Content-Disposition: attachment; filename="report-finances-202610.csv"`.
+* **Query Params**: `type=students | occupancy | finances | mess`, `date` (for mess), `hostelId` (optional)
+* **Access**: `HOSTEL_ADMIN` / `SUPER_ADMIN` (`reports:export`).
+* **Response**: Streamed CSV file attachment with header `Content-Disposition: attachment; filename="report-<type>-<timestamp>.csv"` and proper field escaping.
+
