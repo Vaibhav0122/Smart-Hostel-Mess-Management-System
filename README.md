@@ -1,4 +1,4 @@
-# Smart Hostel & Mess Management System 🏢🍽️
+# Smart Hostel & Mess Management System 
 
 > **A Production-Grade, Full-Stack Hostel Operations and Mess Allocation Platform**  
 > *Academic Capstone Project — BTech Computer Science & Engineering (AI & ML)*
@@ -23,7 +23,7 @@ The system is engineered following enterprise software standards: **layered arch
 
 ---
 
-## 🏗️ Technology Stack
+##  Technology Stack
 
 | Layer | Technology | Rationale & Purpose |
 | :--- | :--- | :--- |
@@ -39,7 +39,7 @@ The system is engineered following enterprise software standards: **layered arch
 
 ---
 
-## 🎯 Key Architectural Pillars (For CSE-AIML Students)
+## Key Architectural Pillars (For CSE-AIML Students)
 
 As an engineering capstone, this project emphasizes foundational backend and distributed systems concepts:
 
@@ -58,21 +58,21 @@ As an engineering capstone, this project emphasizes foundational backend and dis
 
 ---
 
-## 📂 Project Documentation Directory
+##  Project Documentation Directory
 
 Detailed specifications, requirements, and engineering designs have been compiled in the [`docs/`](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs) folder:
 
-* 📄 [**REQUIREMENTS.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/REQUIREMENTS.md): Comprehensive functional requirements (all 15 modules) and non-functional guarantees.
-* 🏛️ [**ARCHITECTURE.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/ARCHITECTURE.md): System architecture, layered design patterns, MongoDB transaction requirements, and storage abstractions.
-* 🗄️ [**DATABASE_SCHEMA.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/DATABASE_SCHEMA.md): Complete collection schemas, field definitions, unique/compound indexes, and data retention models for all 22 collections.
-* 🔌 [**API_SPECIFICATION.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/API_SPECIFICATION.md): REST endpoint contracts, RBAC requirements, request schemas, response envelopes, and error codes.
-* 🛡️ [**ROLE_PERMISSIONS.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/ROLE_PERMISSIONS.md): Complete granular permission matrix (`resource:action`) across initial and future extensible roles.
-* 🔒 [**SECURITY_PLAN.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/SECURITY_PLAN.md): Threat modeling (STRIDE), IDOR mitigation, cryptographic standards, file upload hygiene, and security verification checklists.
-* 🗺️ [**DEVELOPMENT_ROADMAP.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/DEVELOPMENT_ROADMAP.md): Phase-by-phase implementation schedule, milestone acceptance criteria, and student guidance.
+*  [**REQUIREMENTS.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/REQUIREMENTS.md): Comprehensive functional requirements (all 15 modules) and non-functional guarantees.
+*  [**ARCHITECTURE.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/ARCHITECTURE.md): System architecture, layered design patterns, MongoDB transaction requirements, and storage abstractions.
+*  [**DATABASE_SCHEMA.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/DATABASE_SCHEMA.md): Complete collection schemas, field definitions, unique/compound indexes, and data retention models for all 22 collections.
+*  [**API_SPECIFICATION.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/API_SPECIFICATION.md): REST endpoint contracts, RBAC requirements, request schemas, response envelopes, and error codes.
+*  [**ROLE_PERMISSIONS.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/ROLE_PERMISSIONS.md): Complete granular permission matrix (`resource:action`) across initial and future extensible roles.
+*  [**SECURITY_PLAN.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/SECURITY_PLAN.md): Threat modeling (STRIDE), IDOR mitigation, cryptographic standards, file upload hygiene, and security verification checklists.
+*  [**DEVELOPMENT_ROADMAP.md**](file:///c:/Users/vaibh/OneDrive/Desktop/Smart%20Hostel%20Mess%20Management%20System/docs/DEVELOPMENT_ROADMAP.md): Phase-by-phase implementation schedule, milestone acceptance criteria, and student guidance.
 
 ---
 
-## 👥 User Roles & Access Scope
+##  User Roles & Access Scope
 
 * **Hostel Admin / Warden (Initial Scope)**: Manages hostel buildings, room inventory, admissions, bulk CSV import, room allocations, payments, meal menus, complaint resolutions, leave approvals, and visitor logs.
 * **Student Resident (Initial Scope)**: Accesses personal room status, contract details, fee payment records, meal selection before daily cutoffs, maintenance grievances, and leave applications.
@@ -83,7 +83,7 @@ Detailed specifications, requirements, and engineering designs have been compile
 
 ---
 
-## 📁 Repository & Folder Structure
+##  Repository & Folder Structure
 
 The project employs a clean, maintainable structure separating frontend and backend applications while centralizing shared specifications in `docs/`:
 
@@ -159,7 +159,7 @@ Before getting started, ensure you have the following installed on your machine:
 
 ---
 
-## 🚀 Installation & Setup
+##  Installation & Setup
 
 ### 1. Clone the Repository
 
@@ -281,7 +281,7 @@ npm run build:all
 
 ---
 
-## 🍃 MongoDB Replica Set Setup Notes
+##  MongoDB Replica Set Setup Notes
 
 MongoDB multi-document ACID transactions (`session.withTransaction()`) require a replica set or supported sharded cluster.
 
@@ -322,7 +322,7 @@ MongoDB Atlas clusters (including Free M0 tier) automatically run as 3-node repl
 
 ---
 
-## 🚦 Status & Implementation Roadmap
+##  Status & Implementation Roadmap
 
 * [x] **Phase 1: Requirements Analysis and Technical Architecture** (Completed)
   * All 7 foundational specification documents in `docs/`.
@@ -392,7 +392,7 @@ MongoDB Atlas clusters (including Free M0 tier) automatically run as 3-node repl
 
 ---
 
-## 🚀 Production Deployment & Operations Guide
+##  Production Deployment & Operations Guide
 
 ### 1. Production Architecture Overview
 
