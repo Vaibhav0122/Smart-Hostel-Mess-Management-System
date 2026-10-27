@@ -16,7 +16,8 @@
     "lint:backend": "tsc --noEmit",
     "lint:frontend": "npm --prefix frontend run lint",
     "test": "jest --runInBand",
-    "test:backend": "jest --runInBand"
+    "test:backend": "jest --runInBand",
+    "seed:dev": "ts-node src/scripts/seedDevUsers.ts"
   },
   "keywords": [
     "hostel-management",

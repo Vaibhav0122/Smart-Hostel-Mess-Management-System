@@ -5,15 +5,31 @@ export const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+=\-\[\]{}|:;,.])[A-Za-z\d@$!%*?&#^()_+=\-\[\]{}|:;,.]{8,}$/;
 
 export const loginSchema = z.object({
-  body: z.object({
-    identifier: z
-      .string({ required_error: "Identifier (email or student ID) is required." })
-      .trim()
-      .min(1, "Identifier cannot be empty."),
-    password: z
-      .string({ required_error: "Password is required." })
-      .min(1, "Password cannot be empty."),
-  }).strict(),
+  body: z
+    .object({
+      identifier: z
+        .string()
+        .trim()
+        .min(1, "Identifier cannot be empty.")
+        .optional(),
+      email: z
+        .string()
+        .trim()
+        .min(1, "Email cannot be empty.")
+        .optional(),
+      password: z
+        .string({ required_error: "Password is required." })
+        .min(1, "Password cannot be empty."),
+    })
+    .strict()
+    .refine((data) => !!(data.identifier || data.email), {
+      message: "Identifier (email or student ID) is required.",
+      path: ["identifier"],
+    })
+    .transform((data) => ({
+      identifier: (data.identifier || data.email)!.trim(),
+      password: data.password,
+    })),
 });
 
 export const activateAccountSchema = z.object({

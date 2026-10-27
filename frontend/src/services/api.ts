@@ -241,7 +241,8 @@ export async function fetchBackendHealth(): Promise<{
 // ---------------------------------------------------------------------------
 
 export async function loginApi(credentials: {
-  email: string;
+  identifier?: string;
+  email?: string;
   password: string;
 }): Promise<{
   token?: string;
@@ -249,15 +250,23 @@ export async function loginApi(credentials: {
   error?: string;
 }> {
   try {
+    const identifier = (credentials.identifier || credentials.email || "").trim();
     const url = `${API_BASE_URL.replace(/\/$/, "")}/auth/login`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(credentials),
+      body: JSON.stringify({
+        identifier,
+        password: credentials.password,
+      }),
     });
 
     const body = await res.json();
     if (!res.ok) {
+      if (body.error?.details && Array.isArray(body.error.details) && body.error.details.length > 0) {
+        const fieldErrors = body.error.details.map((d: any) => d.message).join(" ");
+        return { error: fieldErrors || body.error.message || "Invalid credentials." };
+      }
       return { error: body.error?.message || "Login failed. Please check credentials." };
     }
 

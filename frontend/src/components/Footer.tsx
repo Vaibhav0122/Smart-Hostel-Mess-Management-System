@@ -1,30 +1,23 @@
 import React from "react";
-import { GraduationCap, Heart, Shield } from "lucide-react";
+import { Building2 } from "lucide-react";
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="mt-12 sm:mt-16 border-t border-slate-800/80 bg-slate-950/70 py-6 sm:py-8 text-xs text-slate-400">
-      <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 px-3 sm:px-6 lg:px-8 text-center sm:text-left">
-        <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
-          <div className="flex items-center gap-1.5 text-slate-300 font-medium">
-            <GraduationCap className="h-4 w-4 text-indigo-400 flex-shrink-0" />
-            <span>BTech CSE (AI &amp; ML) Capstone Project</span>
+    <footer className="mt-16 sm:mt-24 border-t border-slate-200 bg-white py-8 text-xs text-slate-600">
+      <div className="mx-auto max-w-7xl px-3.5 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-600 text-white">
+              <Building2 className="h-3.5 w-3.5" />
+            </div>
+            <span className="font-extrabold text-slate-900 text-sm tracking-tight">NESTORA</span>
+            <span className="text-slate-300 hidden sm:inline">&bull;</span>
+            <span className="text-slate-500 hidden sm:inline">Simplifying hostel accommodation and mess management.</span>
           </div>
-          <span className="hidden sm:inline text-slate-600">&bull;</span>
-          <span className="text-slate-400">Smart Hostel &amp; Mess Management System</span>
-        </div>
 
-        <div className="flex items-center gap-3 text-slate-500 text-[11px] sm:text-xs">
-          <div className="flex items-center gap-1 text-slate-400">
-            <Shield className="h-3 w-3 text-emerald-400 flex-shrink-0" />
-            <span>RBAC &amp; Transactions Verified</span>
-          </div>
-          <span>&bull;</span>
-          <div className="flex items-center gap-1">
-            <span>Built with</span>
-            <Heart className="h-3 w-3 text-rose-500 fill-rose-500 flex-shrink-0" />
-            <span>MERN</span>
-          </div>
+          <p className="text-slate-500 text-[11px] font-medium">
+            &copy; 2026 NESTORA. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>

@@ -74,6 +74,9 @@ web_modules/
 .env.*
 !.env.example
 *.local
+test-credentials.local.json
+credentials.local.json
+.test-credentials*
 
 # Uploaded user files & private documents (CRITICAL FOR PRIVACY)
 uploads/

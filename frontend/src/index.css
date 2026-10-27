@@ -5,6 +5,17 @@
 :root {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   -webkit-tap-highlight-color: transparent;
+
+  /* Consistent Design System Tokens */
+  --bg-primary: #f8faff;
+  --bg-surface: #ffffff;
+  --border-subtle: rgba(226, 232, 240, 0.85);
+  --border-accent: rgba(99, 102, 241, 0.2);
+  --accent-indigo: #4f46e5;
+  --accent-indigo-hover: #4338ca;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --shadow-subtle: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
 }
 
 html {
@@ -15,38 +26,69 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #020617;
-  color: #f8fafc;
+  color: var(--text-main);
+  background-color: var(--bg-primary);
   overflow-x: hidden;
+
+  /* Ambient light-theme background texture:
+     - Extremely subtle radial gradients with pale indigo, lavender, and soft blue tones
+     - Faint, architectural micro dot-grid (0.75px) for a modern, futuristic light feel
+  */
+  background-image:
+    radial-gradient(ellipse 90% 55% at 50% -10%, rgba(99, 102, 241, 0.055), transparent 70%),
+    radial-gradient(circle 750px at 92% 18%, rgba(186, 230, 253, 0.12), transparent 60%),
+    radial-gradient(circle 650px at 8% 45%, rgba(224, 231, 255, 0.16), transparent 55%),
+    radial-gradient(circle 700px at 85% 80%, rgba(199, 210, 254, 0.10), transparent 50%),
+    radial-gradient(#cbd5e1 0.75px, transparent 0.75px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 28px 28px;
+  background-attachment: fixed;
+  background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
 }
 
 /* Accessible focus visible outlines */
 :focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--accent-indigo);
   outline-offset: 2px;
 }
 
-/* Custom scrollbars */
+/* Custom light scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #94a3b8;
 }
 
 /* Hide scrollbar utility for clean mobile horizontal tabs */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
